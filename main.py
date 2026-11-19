@@ -19,9 +19,17 @@ model is a damped log-time trend on the logit scale:
    case is shorter).  Reads are de-duplicated first: Exophase holds
    stale counts between refreshes, and a flat stretch must not outweigh
    the reads where something actually moved.
-2. Shrink each trophy's slope toward the median slope of its own tier
-   (platinum / gold / silver / bronze): one trophy's short history is
-   noisy, and trophies of a tier progress alike.
+2. Keep each trophy's own slope: NO shrinkage toward the median slope
+   of its tier. Round 1 shrank toward the tier median on the idea that
+   one trophy's short history is noisy and trophies of a tier progress
+   alike; the round-2 backtest showed the opposite -- the shrinkage
+   hurt monotonically (SHRINK_PRIOR_N 3 -> 2 -> 1 -> 0.5 -> 0 improved
+   the loss at every step, in every regime and every seed), because
+   trophies within a tier progress very differently (bronze spans story
+   chapters earned in hours and collectibles earned over days), so the
+   tier median is a poor prior for any one trophy's slope. The prior
+   weight is therefore zero (SHRINK_PRIOR_N = 0.0); the shrinkage
+   machinery stays so the mechanism remains visible and auditable.
 3. Extrapolate from the fitted line at the last read, with the slope
    damped by 1 / (1 + KAPPA * (x_target - x_last)): the further ahead,
    the more the rise bends.  This is the concave correction a saturating
@@ -84,6 +92,18 @@ Z = [-1.645, -0.674, 0, 0.674, 1.645]
 # The spread is kept at 0.75x the backtest optimum: the simulation's
 # ground truth is smoother than reality, so the shipped band stays
 # honest about model error instead of chasing the simulated optimum.
+# Round 2 (2026-11-19): SHRINK_PRIOR_N 3.0 -> 0.0 (no tier-median
+# shrinkage; see step 2 above). 25 tuning finals (seeds 1000-1004, 5
+# regimes): mean loss 0.323 vs 0.335 for round 1, better in every
+# regime and every seed; replicated on 25 fresh hold-out finals (seeds
+# 2000-2004): 0.324 vs 0.334, again better in every regime and seed.
+# Recency-weighted OLS and last-rate anchoring were tried in the same
+# backtest and looked better on the tuning seeds but did not replicate
+# on the hold-out seeds, so they were not shipped. The spread is
+# unchanged: narrowing it wins in the simulation's smooth regimes but
+# loses badly in its shock regime, and the shipped band stays honest
+# about real-world refresh jumps instead of chasing the simulated
+# optimum.
 FIT_WINDOW_HOURS = 24.0      # reads used for the fits: the recent regime
 DAMP_KAPPA = 0.5             # slope damping per unit of log-time ahead
 SIGMA_RW_PER_SQRT_DAY = 0.375  # random-walk spread, logit units / sqrt(day)
@@ -92,7 +112,9 @@ SIGMA_EXTRAP_PER_LOG_TIME = 0.225
 SIGMA_FIT_MIN = 0.1125       # floor / cap for the fit-residual spread
 SIGMA_FIT_MAX = 0.525
 SIGMA_MAX = 1.60
-SHRINK_PRIOR_N = 3.0        # pseudo-count for shrinkage to the tier slope
+SHRINK_PRIOR_N = 0.0        # pseudo-count for shrinkage to the tier slope;
+                             # 0.0 by round-2 evidence (see step 2): the
+                             # tier-median prior hurts, so no shrinkage
 
 
 def clamp(x, lo, hi):
