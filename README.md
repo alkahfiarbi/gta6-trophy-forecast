@@ -23,8 +23,12 @@ scale:
 1. For each trophy, fit logit(rate) against ln(1 + hours since release)
    by least squares over the last 24 h of reads. Reads are de-duplicated
    first — Exophase holds stale counts between refreshes.
-2. Shrink each trophy's slope toward the median slope of its tier
-   (platinum / gold / silver / bronze).
+2. Each trophy keeps its own fitted slope — no shrinkage toward the
+   median slope of its tier. Round 1 shrank toward the tier median, but
+   the round-2 backtest showed that hurts monotonically: trophies
+   within a tier progress very differently (bronze spans story chapters
+   earned in hours and collectibles earned over days), so the tier
+   median is a poor prior for any one trophy's slope.
 3. Extrapolate from the fitted line at the last read, with the slope
    damped by 1 / (1 + 0.5 * log-time ahead) — the concave correction a
    saturating adoption curve needs.
@@ -41,6 +45,14 @@ every simulated final (mean loss ~0.21 vs ~0.33) and the persistence
 baseline in all but a post-cutoff player-count shock no forecaster can
 see coming. The spread is kept at 0.75x the backtest optimum, because
 the simulation's ground truth is smoother than reality.
+
+Round 2 (2026-11-19) drops the tier-median shrinkage (see step 2):
+25 tuning finals (seeds 1000–1004, 5 regimes) give mean loss 0.323 vs
+0.335 for round 1, better in every regime and every seed, replicated
+on 25 fresh hold-out finals (seeds 2000–2004): 0.324 vs 0.334.
+Recency-weighted OLS and last-rate anchoring were tried and did not
+replicate on the hold-out seeds, so they were not shipped; the spread
+is unchanged.
 
 ## Run it
 
