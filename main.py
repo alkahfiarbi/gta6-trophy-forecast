@@ -106,6 +106,7 @@ Z = [-1.645, -0.674, 0, 0.674, 1.645]
 # optimum.
 FIT_WINDOW_HOURS = 24.0      # reads used for the fits: the recent regime
 DAMP_KAPPA = 0.5             # slope damping per unit of log-time ahead
+MED_SHIFT = -0.05
 SIGMA_RW_PER_SQRT_DAY = 0.375  # random-walk spread, logit units / sqrt(day)
 SIGMA_BASE = 0.1875          # irreducible refresh / model uncertainty
 SIGMA_EXTRAP_PER_LOG_TIME = 0.225
@@ -271,7 +272,7 @@ def forecast_case(case, name):
         b_star = clamp(b_star, -0.2, 3.0)
         # Extrapolate from the fitted line at the last read, damped.
         anchor = a_i + b_i * x_last
-        lg_med = anchor + b_star * dx * damp
+        lg_med = anchor + b_star * dx * damp + MED_SHIFT
         med = 100.0 * sigmoid(lg_med)
         med = clamp(med, 0.01, 99.99)
         # A trophy every tracked player holds stays held.
